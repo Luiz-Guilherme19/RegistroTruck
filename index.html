@@ -5,47 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#51504F">
 <title>Minhas Entregas</title>
-<style>
-:root{--bg:#121212;--g:#C6F8CB;--d:#51504F;--card:#232322;--t:#f4f4f3;--mut:#b3b3b2;--ok:#2fbf5f;--no:#e5484d;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
-*{box-sizing:border-box}
-html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
-body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--d) 0,var(--bg) 320px) no-repeat,var(--bg);color:var(--t);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:720px;margin:0 auto;padding:24px 16px 120px}
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-h1{font-size:1.7rem;margin:0;letter-spacing:-.02em}
-.sub{font-size:.85rem;color:var(--mut);text-transform:capitalize;margin-top:2px}
-.tabs{display:flex;gap:8px;margin-bottom:18px}
-.tab{padding:9px 20px;border:0;border-radius:99px;background:rgba(255,255,255,.1);color:var(--t);font-weight:600;font-size:.9rem;cursor:pointer}
-.tab.on{background:var(--g);color:#121212}
-.card{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;transition:background .15s,transform .1s}
-.card:hover{background:#2f2f2e}
-.card:active{transform:scale(.98)}
-.info{flex:1;min-width:0}
-.nome{font-weight:700;font-size:1.05rem;overflow-wrap:anywhere}
-.end{font-size:.9rem;color:var(--mut);margin-top:2px;overflow-wrap:anywhere}
-.rota{display:inline-block;margin-top:8px;font-size:.78rem;font-weight:600;background:var(--d);color:var(--g);padding:4px 11px;border-radius:99px}
-.badge{display:inline-block;margin-top:8px;margin-left:6px;font-size:.78rem;font-weight:600;padding:4px 11px;border-radius:99px}
-.b-ok{background:var(--ok);color:#06210f}.b-no{background:var(--no);color:#fff}
-.acts{display:flex;flex-direction:column;gap:8px}
-.btn{width:44px;height:44px;border:0;border-radius:50%;color:#fff;font-size:1.3rem;font-weight:700;cursor:pointer;display:grid;place-items:center;transition:transform .1s}
-.btn:active{transform:scale(.9)}
-.ok{background:var(--ok);color:#06210f}.no{background:var(--no)}
-.btn.off{opacity:.3}
-.done{opacity:.75}
-.empty{text-align:center;padding:48px 10px;color:var(--mut)}
-form{background:var(--card);border-radius:16px;padding:20px}
-label{display:block;font-weight:600;margin:0 0 6px;font-size:.9rem}
-input{width:100%;padding:13px;border:2px solid transparent;background:var(--d);border-radius:10px;font-size:1rem;margin-bottom:16px;color:var(--t)}
-input::placeholder{color:#a9a9a7}
-input:focus{outline:none;border-color:var(--g)}
-.save{width:100%;padding:14px;border:0;border-radius:99px;background:var(--g);color:#121212;font-size:1rem;font-weight:700;cursor:pointer}
-.fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:60px;height:60px;border-radius:50%;border:0;background:var(--g);color:#121212;font-size:2rem;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.5)}
-a.rota{text-decoration:none}
-.del{margin-top:10px;display:block;border:0;background:transparent;color:var(--mut);font-size:.8rem;font-weight:600;padding:6px 0;cursor:pointer}
-.del:hover{color:var(--no)}
-.del.arm{color:#fff;background:var(--no);border-radius:99px;padding:6px 14px}
-.hide{display:none}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="wrap">
@@ -71,52 +31,6 @@ a.rota{text-decoration:none}
 </div>
 <button class="fab" id="fab" aria-label="Adicionar entrega">+</button>
 
-<script>
-var KEY="entregas_v1",items=[];
-try{items=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){items=[]}
-var hoje=new Date().toISOString().slice(0,10);
-document.getElementById("data").textContent=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
-var armed=-1,tm;
-function maps(e){return "https://www.google.com/maps/dir/?api=1&travelmode=driving&destination="+encodeURIComponent(e)}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
-function esc(s){return s.replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
-function render(){
-  var L=document.getElementById("lista");
-  if(!items.length){L.innerHTML='<div class="empty">Nenhuma entrega ainda.<br>Toque em <b>+</b> para adicionar.</div>';return}
-  L.innerHTML=items.map(function(it,i){
-    var s=it.dia===hoje?it.status:"";
-    var b=s==="ok"?'<span class="badge b-ok">Concluída hoje</span>':s==="no"?'<span class="badge b-no">Não concluída</span>':"";
-    return '<div class="card'+(s?" done":"")+'" data-i="'+i+'"><div class="info"><div class="nome">'+esc(it.nome)+'</div><div class="end">'+esc(it.end)+'</div><a class="rota" href="'+maps(it.end)+'" target="_blank" rel="noopener noreferrer">📍 Ver rota no Maps</a>'+b+'<button class="del'+(armed===i?" arm":"")+'" data-a="del" data-i="'+i+'">'+(armed===i?"Toque de novo para excluir":"🗑 Excluir")+'</button></div><div class="acts"><button class="btn ok'+(s==="no"?" off":"")+'" data-a="ok" data-i="'+i+'" aria-label="Concluída">✓</button><button class="btn no'+(s==="ok"?" off":"")+'" data-a="no" data-i="'+i+'" aria-label="Não concluída">✕</button></div></div>'
-  }).join("")
-}
-document.getElementById("lista").addEventListener("click",function(ev){
-  var d=ev.target.closest(".del");
-  if(d){ev.stopPropagation();var k=+d.dataset.i;clearTimeout(tm);
-    if(armed===k){items.splice(k,1);armed=-1;save()}
-    else{armed=k;tm=setTimeout(function(){armed=-1;render()},3500)}
-    render();return}
-  if(ev.target.closest("a"))return;
-  var btn=ev.target.closest(".btn");
-  if(btn){ev.stopPropagation();var i=+btn.dataset.i;items[i].status=btn.dataset.a;items[i].dia=hoje;save();render();return}
-  var c=ev.target.closest(".card");
-  if(c){var a=document.createElement("a");a.href=maps(items[+c.dataset.i].end);a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();a.remove()}
-});
-function aba(n){
-  document.getElementById("lista").classList.toggle("hide",n===2);
-  document.getElementById("novo").classList.toggle("hide",n===1);
-  document.getElementById("t1").classList.toggle("on",n===1);
-  document.getElementById("t2").classList.toggle("on",n===2);
-  document.getElementById("fab").classList.toggle("hide",n===2);
-}
-document.getElementById("t1").onclick=function(){aba(1)};
-document.getElementById("t2").onclick=function(){aba(2)};
-document.getElementById("fab").onclick=function(){aba(2)};
-document.getElementById("f").onsubmit=function(ev){
-  ev.preventDefault();
-  items.push({nome:document.getElementById("n").value.trim(),end:document.getElementById("e").value.trim(),status:"",dia:""});
-  save();ev.target.reset();render();aba(1);
-};
-render();
-</script>
+<script src="script.js"></script>
 </body>
 </html>
