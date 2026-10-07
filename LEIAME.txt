@@ -1,0 +1,10 @@
+Minhas Entregas - site para motorista de caminhao
+
+Como usar:
+1. Abra o arquivo index.html em qualquer navegador (celular ou computador).
+2. Para publicar, envie index.html para qualquer hospedagem de sites estaticos
+   (Netlify, Vercel, GitHub Pages etc.).
+
+Observacoes:
+- As entregas ficam salvas no navegador do aparelho (localStorage).
+- Tocar na entrega abre o Google Maps com a rota ate o endereco.
