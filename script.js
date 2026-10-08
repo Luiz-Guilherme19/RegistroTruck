@@ -129,25 +129,55 @@ function aba(n){
 document.getElementById("t1").onclick=function(){aba(1)};
 document.getElementById("t2").onclick=function(){aba(2)};
 document.getElementById("fab").onclick=function(){aba(2)};
-document.getElementById("ref").onclick=function(){if(pos)calc(true);else startGeo();ensureCoords()};
+document.getElementById("ref").onclick=function(){var b=this;b.classList.add("spin");setTimeout(function(){b.classList.remove("spin")},900);if(pos)calc(true);else startGeo();ensureCoords()};
 
 /* ---------- voz ---------- */
-var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,mic=document.getElementById("mic"),vs=document.getElementById("vs"),inp=document.getElementById("e");
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,ativo=false,fin="",ult="",semFala=0,tSil=null,mic=document.getElementById("mic"),vs=document.getElementById("vs"),inp=document.getElementById("e");
 function limpa(t){return t.replace(/\s*,?\s*v[ií]rgula\s*/gi,", ").replace(/\s+/g," ").trim()}
+function parar(msg){
+  ativo=false;clearTimeout(tSil);
+  if(rec){try{rec.stop()}catch(e){}}
+  mic.classList.remove("rec");mic.setAttribute("aria-pressed","false");
+  vs.className="vs";
+  vs.textContent=msg!==undefined?msg:(inp.value?"Confira o endereço e salve.":"");
+}
+function ouvir(){
+  var r=new SR(),sf="",fatal=false;rec=r;
+  r.lang="pt-BR";r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
+  r.onresult=function(ev){
+    var f="",it="";
+    for(var i=0;i<ev.results.length;i++){var x=ev.results[i];if(x.isFinal)f+=x[0].transcript+" ";else it+=x[0].transcript}
+    sf=f;ult=it;semFala=0;
+    inp.value=limpa(fin+" "+f+it);
+    clearTimeout(tSil);tSil=setTimeout(function(){parar()},4000);
+  };
+  r.onerror=function(ev){
+    if(ev.error==="no-speech"||ev.error==="aborted")return;
+    fatal=true;
+    parar(ev.error==="not-allowed"||ev.error==="service-not-allowed"?"Permita o uso do microfone no navegador.":ev.error==="network"?"Sem internet para reconhecer a voz. Verifique a conexão.":"Erro no microfone ("+ev.error+").");
+  };
+  r.onend=function(){
+    fin=limpa(fin+" "+(sf||ult));sf="";ult="";
+    if(rec===r)rec=null;
+    if(ativo&&!fatal){
+      if(++semFala>3)parar("Não ouvi nada. Toque no microfone e tente de novo.");
+      else setTimeout(function(){if(ativo&&!rec)ouvir()},200);
+    }
+  };
+  try{r.start()}catch(e){parar("Não consegui iniciar o microfone.")}
+}
 if(!SR){mic.classList.add("hide")}
 else mic.onclick=function(){
-  if(rec){rec.stop();return}
-  var err=false;rec=new SR();rec.lang="pt-BR";rec.interimResults=true;rec.continuous=false;
-  mic.classList.add("rec");vs.textContent="Ouvindo… fale o endereço";
-  rec.onresult=function(ev){var t="";for(var i=0;i<ev.results.length;i++)t+=ev.results[i][0].transcript;inp.value=limpa(t)};
-  rec.onerror=function(ev){err=true;vs.textContent=(ev.error==="not-allowed"||ev.error==="service-not-allowed")?"Permita o uso do microfone no navegador.":ev.error==="no-speech"?"Não ouvi nada. Toque no microfone e tente de novo.":"Erro no microfone ("+ev.error+")."};
-  rec.onend=function(){mic.classList.remove("rec");rec=null;if(!err)vs.textContent=inp.value?"Confira o endereço e salve.":""};
-  try{rec.start()}catch(e){rec=null;mic.classList.remove("rec")}
+  if(ativo){parar();return}
+  ativo=true;fin="";ult="";semFala=0;
+  mic.classList.add("rec");mic.setAttribute("aria-pressed","true");
+  vs.className="vs on";vs.textContent="Ouvindo… fale o endereço";
+  ouvir();
 };
 
 document.getElementById("f").onsubmit=function(ev){
   ev.preventDefault();
-  if(rec)rec.stop();
+  if(ativo)parar("");
   items.push({id:uid(),nome:document.getElementById("n").value.trim(),end:inp.value.trim(),status:"",dia:""});
   save();ev.target.reset();vs.textContent="";aba(1);ensureCoords();
 };
