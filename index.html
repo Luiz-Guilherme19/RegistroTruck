@@ -11,11 +11,14 @@
 <div class="wrap">
   <header>
     <div><h1>🚚 Minhas Entregas</h1><div class="sub" id="data"></div></div>
+    <button class="ref" id="ref" aria-label="Atualizar distâncias" title="Atualizar distâncias">↻</button>
   </header>
   <div class="tabs">
     <button class="tab on" id="t1">Entregas</button>
     <button class="tab" id="t2">Adicionar</button>
   </div>
+
+  <div id="aviso" class="aviso hide"></div>
 
   <section id="lista"></section>
 
@@ -24,7 +27,11 @@
       <label for="n">Cliente / entrega</label>
       <input id="n" required placeholder="Ex.: Mercado Central">
       <label for="e">Endereço</label>
-      <input id="e" required placeholder="Rua, número, bairro, cidade">
+      <div class="campo">
+        <input id="e" required placeholder="Rua, número, bairro, cidade">
+        <button type="button" class="mic" id="mic" aria-label="Falar o endereço" title="Falar o endereço">🎤</button>
+      </div>
+      <div class="vs" id="vs"></div>
       <button class="save" type="submit">Salvar entrega</button>
     </form>
   </section>
