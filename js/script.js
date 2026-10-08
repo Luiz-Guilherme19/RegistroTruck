@@ -54,6 +54,7 @@ function calc(force){
     }).catch(function(){});
 }
 function onPos(p){
+  if(window.tripFeed)tripFeed(p);
   var first=geoState!=="ok";
   pos={lat:p.coords.latitude,lon:p.coords.longitude,t:Date.now()};
   geoState="ok";clearTimeout(geoTimer);
@@ -120,59 +121,76 @@ document.getElementById("lista").addEventListener("click",function(ev){
   if(c){var a=document.createElement("a");a.href=maps(items[+c.dataset.i].end);a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();a.remove()}
 });
 function aba(n){
-  document.getElementById("lista").classList.toggle("hide",n===2);
-  document.getElementById("novo").classList.toggle("hide",n===1);
-  document.getElementById("t1").classList.toggle("on",n===1);
-  document.getElementById("t2").classList.toggle("on",n===2);
-  document.getElementById("fab").classList.toggle("hide",n===2);
+  ["lista","novo","viagem"].forEach(function(id,i){document.getElementById(id).classList.toggle("hide",n!==i+1)});
+  ["t1","t2","t3"].forEach(function(id,i){document.getElementById(id).classList.toggle("on",n===i+1)});
+  document.getElementById("fab").classList.toggle("hide",n!==1);
 }
 document.getElementById("t1").onclick=function(){aba(1)};
 document.getElementById("t2").onclick=function(){aba(2)};
 document.getElementById("fab").onclick=function(){aba(2)};
+document.getElementById("t3").onclick=function(){aba(3)};
 document.getElementById("ref").onclick=function(){var b=this;b.classList.add("spin");setTimeout(function(){b.classList.remove("spin")},900);if(pos)calc(true);else startGeo();ensureCoords()};
 
 /* ---------- voz ---------- */
-var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,ativo=false,fin="",ult="",semFala=0,tSil=null,mic=document.getElementById("mic"),vs=document.getElementById("vs"),inp=document.getElementById("e");
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,ativo=false,fin="",ult="",semFala=0,tSil=null,redeTent=0,mic=document.getElementById("mic"),vs=document.getElementById("vs"),inp=document.getElementById("e");
+var MSG_REDE="Não consegui acessar o serviço de voz. Verifique a internet (desligue VPN ou bloqueador), use o Google Chrome, ou toque no 🎤 do teclado do celular para ditar.";
 function limpa(t){return t.replace(/\s*,?\s*v[ií]rgula\s*/gi,", ").replace(/\s+/g," ").trim()}
-function parar(msg){
+function amb(){
+  var u=navigator.userAgent;
+  if(navigator.brave)return "brave";
+  if(/FBAN|FBAV|Instagram|Line\/|WhatsApp|; wv\)|MicroMessenger|Snapchat|TikTok/i.test(u))return "app";
+  return "";
+}
+function parar(msg,erro){
   ativo=false;clearTimeout(tSil);
   if(rec){try{rec.stop()}catch(e){}}
   mic.classList.remove("rec");mic.setAttribute("aria-pressed","false");
-  vs.className="vs";
+  vs.className="vs"+(erro?" err":"");
   vs.textContent=msg!==undefined?msg:(inp.value?"Confira o endereço e salve.":"");
+  if(erro)inp.focus();
 }
-function ouvir(){
+function ouvir(local){
   var r=new SR(),sf="",fatal=false;rec=r;
   r.lang="pt-BR";r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
+  if(local){try{if("processLocally" in r)r.processLocally=true}catch(e){}}
   r.onresult=function(ev){
     var f="",it="";
     for(var i=0;i<ev.results.length;i++){var x=ev.results[i];if(x.isFinal)f+=x[0].transcript+" ";else it+=x[0].transcript}
-    sf=f;ult=it;semFala=0;
+    sf=f;ult=it;semFala=0;redeTent=0;
     inp.value=limpa(fin+" "+f+it);
     clearTimeout(tSil);tSil=setTimeout(function(){parar()},4000);
   };
   r.onerror=function(ev){
-    if(ev.error==="no-speech"||ev.error==="aborted")return;
+    var e=ev.error;
+    if(e==="no-speech"||e==="aborted")return;
     fatal=true;
-    parar(ev.error==="not-allowed"||ev.error==="service-not-allowed"?"Permita o uso do microfone no navegador.":ev.error==="network"?"Sem internet para reconhecer a voz. Verifique a conexão.":"Erro no microfone ("+ev.error+").");
+    if(e==="network"||e==="language-not-supported"){
+      if(redeTent===0){redeTent=1;vs.textContent="Reconectando…";setTimeout(function(){if(ativo)ouvir(false)},800);return}
+      if(redeTent===1&&"processLocally" in SR.prototype){redeTent=2;setTimeout(function(){if(ativo)ouvir(true)},800);return}
+      parar(MSG_REDE,true);return;
+    }
+    parar((e==="not-allowed"||e==="service-not-allowed")?"Permita o microfone para este site nas configurações do navegador (no iPhone, ative também o Ditado em Ajustes > Geral > Teclado).":"Erro no microfone ("+e+"). Use o 🎤 do teclado do celular para ditar.",true);
   };
   r.onend=function(){
     fin=limpa(fin+" "+(sf||ult));sf="";ult="";
     if(rec===r)rec=null;
     if(ativo&&!fatal){
       if(++semFala>3)parar("Não ouvi nada. Toque no microfone e tente de novo.");
-      else setTimeout(function(){if(ativo&&!rec)ouvir()},200);
+      else setTimeout(function(){if(ativo&&!rec)ouvir(false)},200);
     }
   };
-  try{r.start()}catch(e){parar("Não consegui iniciar o microfone.")}
+  try{r.start()}catch(e){parar("Não consegui iniciar o microfone.",true)}
 }
 if(!SR){mic.classList.add("hide")}
 else mic.onclick=function(){
   if(ativo){parar();return}
-  ativo=true;fin="";ult="";semFala=0;
+  var a=amb();
+  if(a==="brave"){parar("O Brave bloqueia o reconhecimento de voz. Abra o site no Google Chrome ou use o 🎤 do teclado do celular.",true);return}
+  if(a==="app"){parar("Navegadores dentro de apps (WhatsApp, Instagram…) não permitem voz. Abra o link no Chrome ou Safari, ou use o 🎤 do teclado do celular.",true);return}
+  ativo=true;fin="";ult="";semFala=0;redeTent=0;
   mic.classList.add("rec");mic.setAttribute("aria-pressed","true");
   vs.className="vs on";vs.textContent="Ouvindo… fale o endereço";
-  ouvir();
+  ouvir(false);
 };
 
 document.getElementById("f").onsubmit=function(ev){
@@ -183,4 +201,11 @@ document.getElementById("f").onsubmit=function(ev){
 };
 
 document.addEventListener("visibilitychange",function(){if(!document.hidden){if(geoState!=="ok")startGeo();else calc(true)}});
+function aplicaTema(t){
+  document.documentElement.setAttribute("data-theme",t);
+  var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",t==="light"?"#FEFEFC":"#51504F");
+  try{localStorage.setItem("tema",t)}catch(e){}
+}
+document.getElementById("tema").onclick=function(){aplicaTema(document.documentElement.getAttribute("data-theme")==="light"?"dark":"light")};
+aplicaTema(document.documentElement.getAttribute("data-theme")==="light"?"light":"dark");
 render();ensureCoords();startGeo();
